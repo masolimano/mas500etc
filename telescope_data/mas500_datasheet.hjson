@@ -1,0 +1,54 @@
+{
+# Telescope properties
+  diameter: 50
+    # in cm
+# --Camera properies--
+  npixels: {
+    x: 4096
+    y: 4096
+  }
+  pixelsize: 9
+    # in micrometers
+  pixelscale: 0.32
+    # arcsecodns per pixel
+  darkcurrent: 0.005
+    # electrons per pixel per sec at -33 degrees
+
+  # Readout noise
+  ron: {
+      # in electrons per pixel per exposure
+    fast: 14
+      # for readout speeds of 8 MHz
+    slow: 10
+      # for readout speeds of 1 MHz
+    }
+
+  # Filters
+  filters:{
+    u: {
+      quantum_efficency: 0.5
+      effective_wavelength: 3608.04
+      bandpass: 540.97
+    }
+    g: {
+      quantum_efficency: 0.5
+      effective_wavelength: 4671.78
+      bandpass: 1064.68
+    }
+    r: {
+      quantum_efficency: 0.5
+      effective_wavelength: 6141.12
+      bandpass: 1055.51
+    }
+    i: {
+      quantum_efficency: 0.5
+      effective_wavelength: 7457.89
+      bandpass: 1238.95
+    }
+    z:{
+      quantum_efficency: 0.5
+      effective_wavelength: 8922.78
+      bandpass: 1164.01
+    }
+  }
+}
