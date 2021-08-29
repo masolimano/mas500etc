@@ -28,39 +28,51 @@ class ETC:
             info_tel['filters'][flt]['effective_wavelength'] *= u.AA
             info_tel['filters'][flt]['bandpass'] *= u.AA
 
-
-    def __init__(self, input_file):
+    @staticmethod
+    def read_input(input_file):
         """
         Parse the input file
         """
         with open(input_file, 'r') as hj:
-            self.input_dict = hjson.load(hj)
+            input_dict = hjson.load(hj)
+
+        instance = ETC(**input_dict)
+        return instance
+
+
+
+    def __init__(self, **kwargs):
+        """
+        """
+        self.input_dict = kwargs
+
+        assert 'filter' in self.input_dict
+        assert 'read_out_mode' in self.input_dict
+        assert 'sky_brightness' in self.input_dict
+        assert 'binning' in self.input_dict
+        if self.input_dict['binning'] == '1x1':
+            self.bin2 = 1
+        elif self.input_dict['binning'] == '2x2':
+            self.bin2 = 4
+        else:
+            raise SyntaxError('Please enter "2x2" or "1x1" for the binning')
 
         if self.input_dict['mode'] == 'time':
             # Validate and assign units
-            assert 'filter' in self.input_dict
-            assert 'read_out_mode' in self.input_dict
-            assert 'binning' in self.input_dict
             assert 'source_type' in self.input_dict
             assert 'magnitude' in self.input_dict
-            assert 'sky_brightness' in self.input_dict
             assert 'seeing' in self.input_dict
+            assert 'target_snr' in self.input_dict
 
             self.input_dict['magnitude'] *= u.STmag
 
             self.input_dict['seeing'] *= u.arcsec
 
-            if self.input_dict['binning'] == '1x1':
-                self.bin2 = 1
-            elif self.input_dict['binning'] == '2x2':
-                self.bin2 = 4
-            else:
-                raise SyntaxError('Please enter "2x2" or "1x1" for the binning')
 
             if self.input_dict['source_type'] == 'point':
 
                 # FWHM area of the point source in native pixels^2
-                self.source_area = np.pi * (0.5 * self.input_dict['seeing'] / self.info_tel['pixelscale']) ** 2
+                self.source_area =  np.pi * (0.5 * self.input_dict['seeing'] / self.info_tel['pixelscale']) ** 2
 
             else:
                 raise NotImplementedError(f"Sources of the type {self.input_dict['source_type']} are not implemented.")
@@ -68,7 +80,8 @@ class ETC:
 
         elif self.input_dict['mode'] == 'noise':
             # Validate
-            pass
+            assert 'exposure_time' in self.input_dict
+            self.input_dict['exposure_time'] *= u.s
 
         else:
             # Raise some error
@@ -96,14 +109,26 @@ class ETC:
         sky_photon_rate = (magnitude_in_fov.to(FLAM_UNIT) * self.info_tel['filters'][self.input_dict['filter']]['effective_wavelength'] / (PLANCK_H * LIGHTSPEED)).decompose()
         bandpass = self.info_tel['filters'][self.input_dict['filter']]['bandpass']
         efficency = self.info_tel['filters'][self.input_dict['filter']]['quantum_efficency']
-        self.sky_electron_rate = sky_photon_rate * self.collecting_area * bandpass * efficency  / chip_npixels
+        self.sky_electron_rate = (sky_photon_rate * self.collecting_area * bandpass * efficency  / chip_npixels).decompose()
 
 
     def _solve_noise_mode(self):
         """
         Enter a exposure time and obtain noise level
         """
-        pass
+        t = self.input_dict['exposure_time']
+        self._compute_sky_electron_rate()
+        variance = (self.sky_electron_rate + self.info_tel['darkcurrent']) * t \
+                + self.info_tel['ron'][self.input_dict['read_out_mode']] ** 2 / u.electron
+        noise = np.sqrt(variance.value) * u.electron / u.pixel **2
+        efficency  = self.info_tel['filters'][self.input_dict['filter']]['quantum_efficency']
+        bandpass = self.info_tel['filters'][self.input_dict['filter']]['bandpass']
+        w_eff = self.info_tel['filters'][self.input_dict['filter']]['effective_wavelength']
+        surface_brightness_limit = 3 * noise * PLANCK_H * LIGHTSPEED / (self.bin2 * self.info_tel['pixelscale'] ** 2 \
+                                                                        * self.collecting_area * w_eff \
+                                                                        * bandpass * efficency * t)
+        self.surface_brightness_limit = surface_brightness_limit.to(FLAM_UNIT / u.arcsec ** 2)
+
 
     def _solve_time_mode(self):
         """
@@ -120,12 +145,54 @@ class ETC:
                  * self.source_area / self.bin2
         c = c.decompose().value
 
-        exposure_time = (-b + np.sqrt(b ** 2 - 4 * a * c) / (2 * a)) * u.s
+        exposure_time = ((-b + np.sqrt(b ** 2 - 4 * a * c)) / (2 * a)) * u.s
+
         return exposure_time
 
 
 if __name__ == '__main__':
-    etc = ETC('test_input/input_tmode_00.hjson')
+    etc = ETC.read_input('test_input/input_tmode_00.hjson')
     t = etc._solve_time_mode()
     print(t)
+
+    etc = ETC(
+        mode='time',
+        filter='g',
+        read_out_mode='fast',
+        source_type='point',
+        binning='2x2',
+        sky_brightness=21,
+        magnitude=15,
+        seeing=1.0,
+        target_snr=10
+    )
+    t = etc._solve_time_mode()
+    print(t)
+    print(f'Magnitude 15 = {etc.source_electron_rate:.0f}')
+
+    etc = ETC(
+        mode='time',
+        filter='g',
+        read_out_mode='fast',
+        source_type='point',
+        binning='2x2',
+        sky_brightness=21,
+        magnitude=18,
+        seeing=1.0,
+        target_snr=10
+    )
+    t = etc._solve_time_mode()
+    print(t)
+    print(f'Magnitude 18 = {etc.source_electron_rate:.0f}')
+
+    etc = ETC(
+        mode='noise',
+        filter='g',
+        read_out_mode='slow',
+        binning='1x1',
+        sky_brightness=21,
+        exposure_time=1e3
+    )
+    etc._solve_noise_mode()
+    print(etc.surface_brightness_limit)
 

@@ -50,5 +50,10 @@
       effective_wavelength: 8922.78
       bandpass: 1164.01
     }
+    V:{
+      quantum_efficency: 0.5
+      effective_wavelength: 5500.00
+      bandpass: 860
+}
   }
 }
