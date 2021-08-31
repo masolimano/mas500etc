@@ -149,50 +149,23 @@ class ETC:
 
         return exposure_time
 
+    def run(self):
+        """
+        Public method for running the exposure time
+        calculator.
+        """
+        if self.input_dict['mode'] == 'time':
+            t = self._solve_time_mode()
+            print(f'Exposure time = {t:.1f}')
+
+        elif self.input_dict['mode'] == 'noise':
+            self._solve_noise_mode()
+            print(f'3-sigma surface brightness sensitivty = {self.surface_brightness_limit:.1e}')
+
 
 if __name__ == '__main__':
     etc = ETC.read_input('test_input/input_tmode_00.hjson')
-    t = etc._solve_time_mode()
-    print(t)
+    etc.run()
 
-    etc = ETC(
-        mode='time',
-        filter='g',
-        read_out_mode='fast',
-        source_type='point',
-        binning='2x2',
-        sky_brightness=21,
-        magnitude=15,
-        seeing=1.0,
-        target_snr=10
-    )
-    t = etc._solve_time_mode()
-    print(t)
-    print(f'Magnitude 15 = {etc.source_electron_rate:.0f}')
-
-    etc = ETC(
-        mode='time',
-        filter='g',
-        read_out_mode='fast',
-        source_type='point',
-        binning='2x2',
-        sky_brightness=21,
-        magnitude=18,
-        seeing=1.0,
-        target_snr=10
-    )
-    t = etc._solve_time_mode()
-    print(t)
-    print(f'Magnitude 18 = {etc.source_electron_rate:.0f}')
-
-    etc = ETC(
-        mode='noise',
-        filter='g',
-        read_out_mode='slow',
-        binning='1x1',
-        sky_brightness=21,
-        exposure_time=1e3
-    )
-    etc._solve_noise_mode()
-    print(etc.surface_brightness_limit)
-
+    etc = ETC.read_input('test_input/input_nmode_00.hjson')
+    etc.run()
