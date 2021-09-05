@@ -26,27 +26,27 @@
   # Filters
   filters:{
     u: {
-      quantum_efficency: 0.5
+      quantum_efficency: 0.015
       effective_wavelength: 3608.04
       bandpass: 540.97
     }
     g: {
-      quantum_efficency: 0.5
+      quantum_efficency: 0.1308
       effective_wavelength: 4671.78
       bandpass: 1064.68
     }
     r: {
-      quantum_efficency: 0.5
+      quantum_efficency: 0.027
       effective_wavelength: 6141.12
       bandpass: 1055.51
     }
     i: {
-      quantum_efficency: 0.5
+      quantum_efficency: 0.0115
       effective_wavelength: 7457.89
       bandpass: 1238.95
     }
     z:{
-      quantum_efficency: 0.5
+      quantum_efficency: 0.00198
       effective_wavelength: 8922.78
       bandpass: 1164.01
     }
